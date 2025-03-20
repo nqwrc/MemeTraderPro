@@ -97,7 +97,13 @@ class KuCoinAPI:
             self.exchange.enableRateLimit = True
             
             # Fetch the OHLCV data
+            if self.dry_run:
+                print(f"[DRY RUN] Fetching OHLCV data for {symbol}")
+                
             ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
+            
+            if self.dry_run:
+                print(f"[DRY RUN] Received {len(ohlcv) if ohlcv else 0} candles for {symbol}")
             
             # Convert to list format [timestamp, open, high, low, close, volume]
             return ohlcv

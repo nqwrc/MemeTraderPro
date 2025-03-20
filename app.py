@@ -74,6 +74,9 @@ def run_trading_bot(symbols, api_key, api_secret, api_passphrase, timeframe, ini
         while st.session_state.bot_running:
             try:
                 for symbol in symbols:
+                    # Log attempt to fetch data
+                    log_message(f"Fetching data for {symbol}...")
+                    
                     # Fetch latest price data
                     ohlcv_data = kucoin.fetch_ohlcv(symbol, timeframe)
                     if ohlcv_data is None or len(ohlcv_data) == 0:
@@ -82,6 +85,7 @@ def run_trading_bot(symbols, api_key, api_secret, api_passphrase, timeframe, ini
                     
                     # Process data
                     df = data_processor.process_ohlcv_data(ohlcv_data)
+                    log_message(f"Processed {len(df)} data points for {symbol}")
                     
                     # Check if we have enough data
                     if len(df) < 100:  # Need enough data for features and training
