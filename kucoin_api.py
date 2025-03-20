@@ -121,6 +121,33 @@ class KuCoinAPI:
         Returns:
         float: Current price or None if error
         """
+        # In dry-run mode, we occasionally modify the price to simulate market movements
+        if self.dry_run:
+            # Check if we have price data for this symbol from a previous fetch_ohlcv call
+            ohlcv_data = self.fetch_ohlcv(symbol, '1h', limit=10)
+            if ohlcv_data and len(ohlcv_data) > 0:
+                # Get the last close price
+                last_price = ohlcv_data[-1][4]  # Close price
+                
+                # For dry run testing, occasionally add some random price movement
+                # to make it more interesting for simulated trading
+                # Only modify price if we have an existing position to avoid wild changes on entry
+                import random
+                if symbol in self.dry_run_positions:
+                    # 20% chance of significant price move for testing
+                    if random.random() < 0.2:
+                        movement = random.choice([
+                            random.uniform(1.05, 1.20),  # Bullish move
+                            random.uniform(0.80, 0.95)   # Bearish move
+                        ])
+                        modified_price = last_price * movement
+                        print(f"[DRY RUN] Simulated price movement for {symbol}: {last_price} -> {modified_price}")
+                        return modified_price
+                
+                # Otherwise return the actual last price
+                return last_price
+            # If we don't have OHLCV data, fall back to real API
+            
         try:
             if not self.exchange:
                 self.initialize_exchange()
