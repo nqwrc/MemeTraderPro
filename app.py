@@ -242,7 +242,7 @@ with tabs[0]:
     
     with col2:
         button_label = "Stop Bot" if st.session_state.bot_running else "Start Bot"
-        button_color = "danger" if st.session_state.bot_running else "success"
+        button_color = "primary" if st.session_state.bot_running else "primary"
         st.button(button_label, on_click=toggle_bot, use_container_width=True, type=button_color)
     
     with col3:
