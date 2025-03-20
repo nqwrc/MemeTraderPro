@@ -47,15 +47,18 @@ def log_message(message, level="INFO"):
 
 # Trading bot function that runs in a separate thread
 def run_trading_bot(symbols, api_key, api_secret, api_passphrase, timeframe, initial_balance, 
-                   risk_per_trade, stop_loss_pct, take_profit_pct):
+                   risk_per_trade, stop_loss_pct, take_profit_pct, dry_run=True):
     try:
         log_message("Initializing trading bot...")
         
         # Initialize components
-        kucoin = kapi.KuCoinAPI(api_key, api_secret, api_passphrase)
+        kucoin = kapi.KuCoinAPI(api_key, api_secret, api_passphrase, dry_run=dry_run)
         data_processor = DataProcessor()
         model_trainer = ModelTrainer()
         trading_logic = TradingLogic(risk_per_trade, stop_loss_pct, take_profit_pct)
+        
+        if dry_run:
+            log_message("Running in DRY RUN mode - no real trades will be executed")
         
         # Check if API connection works
         if not kucoin.test_connection():
@@ -215,11 +218,14 @@ def toggle_bot():
         stop_loss_pct = st.session_state.stop_loss_pct
         take_profit_pct = st.session_state.take_profit_pct
         
+        # Get dry run setting
+        dry_run = st.session_state.dry_run
+        
         # Start the bot in a new thread
         st.session_state.bot_thread = Thread(
             target=run_trading_bot,
             args=(symbols, api_key, api_secret, api_passphrase, timeframe, 
-                  initial_balance, risk_per_trade, stop_loss_pct, take_profit_pct)
+                  initial_balance, risk_per_trade, stop_loss_pct, take_profit_pct, dry_run)
         )
         st.session_state.bot_thread.daemon = True  # Set as daemon so it terminates when main thread ends
         st.session_state.bot_thread.start()
@@ -515,6 +521,23 @@ with tabs[1]:
             help="Percentage above entry price to take profit"
         ) / 100
         st.session_state.take_profit_pct = take_profit_pct
+    
+    # Dry Run Mode
+    st.subheader("Operation Mode")
+    
+    # Initialize dry run mode in session state if not exists
+    if 'dry_run' not in st.session_state:
+        st.session_state.dry_run = True  # Default to dry run mode enabled
+    
+    dry_run = st.checkbox("Dry Run Mode (Simulated trading without real money)", 
+                         value=st.session_state.dry_run,
+                         help="When enabled, the bot will simulate trades without using real funds")
+    st.session_state.dry_run = dry_run
+    
+    if dry_run:
+        st.info("📢 Dry run mode is enabled. The bot will simulate trades without using real funds. Great for testing strategies!")
+    else:
+        st.warning("⚠️ Dry run mode is disabled. The bot will use REAL FUNDS for trading. Make sure your API credentials are correct.")
     
     # Save settings
     if st.button("Save Settings", use_container_width=True):

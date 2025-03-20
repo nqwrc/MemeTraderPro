@@ -174,17 +174,84 @@ class KuCoinAPI:
         Returns:
         dict: Order information or None if error
         """
+        # Make sure side is lowercase
+        side = side.lower()
+        
+        # Check if side is valid
+        if side not in ['buy', 'sell']:
+            print(f"Invalid side: {side}. Must be 'buy' or 'sell'")
+            return None
+            
+        # Handle dry run mode
+        if self.dry_run:
+            try:
+                # If price is not provided, get current price for market orders
+                if price is None:
+                    price = self.get_current_price(symbol)
+                    if price is None:
+                        return None  # Cannot execute trade without price
+                
+                # Calculate cost
+                cost = price * amount
+                
+                # Generate a unique order ID for simulated orders
+                import uuid
+                order_id = str(uuid.uuid4())
+                timestamp = datetime.now().timestamp() * 1000
+                
+                # Simulate the trade execution
+                if side == 'buy':
+                    # Update the dry run balance
+                    self.dry_run_balance -= cost
+                    
+                    # Add position to dry run positions
+                    self.dry_run_positions[symbol] = {
+                        'amount': amount,
+                        'entry_price': price,
+                        'cost': cost,
+                        'timestamp': timestamp
+                    }
+                    
+                    print(f"[DRY RUN] Bought {amount} {symbol} at {price} for {cost} USDT")
+                else:  # sell
+                    # Check if we have the position
+                    if symbol in self.dry_run_positions:
+                        position = self.dry_run_positions[symbol]
+                        profit_loss = (price - position['entry_price']) * amount
+                        
+                        # Update the dry run balance
+                        self.dry_run_balance += cost
+                        
+                        # Remove the position
+                        del self.dry_run_positions[symbol]
+                        
+                        print(f"[DRY RUN] Sold {amount} {symbol} at {price} for {cost} USDT (P/L: {profit_loss})")
+                    else:
+                        print(f"[DRY RUN] Error: Cannot sell {symbol}, no position found")
+                        return None
+                
+                # Return simulated order info
+                return {
+                    'id': order_id,
+                    'symbol': symbol,
+                    'side': side,
+                    'amount': amount,
+                    'price': price,
+                    'cost': cost,
+                    'timestamp': timestamp,
+                    'status': 'closed',  # Assume instant execution
+                    'info': {
+                        'simulation': True
+                    }
+                }
+            except Exception as e:
+                print(f"[DRY RUN] Error executing {side} trade for {symbol}: {str(e)}")
+                return None
+                
+        # Real trading mode
         try:
             if not self.exchange:
                 self.initialize_exchange()
-            
-            # Make sure side is lowercase
-            side = side.lower()
-            
-            # Check if side is valid
-            if side not in ['buy', 'sell']:
-                print(f"Invalid side: {side}. Must be 'buy' or 'sell'")
-                return None
             
             # Determine order type
             order_type = 'limit' if price else 'market'
@@ -246,6 +313,18 @@ class KuCoinAPI:
         Returns:
         dict: Order information or None if error
         """
+        # In dry-run mode, all orders are instantly executed, so we return a simulated "closed" status
+        if self.dry_run:
+            # For simulated orders, we would need to store them somewhere to check
+            # In this simple implementation, we'll just return a generic "completed" response
+            return {
+                'id': order_id,
+                'status': 'closed',
+                'info': {
+                    'simulation': True
+                }
+            }
+        
         try:
             if not self.exchange:
                 self.initialize_exchange()
@@ -269,6 +348,17 @@ class KuCoinAPI:
         Returns:
         dict: Cancellation result or None if error
         """
+        # In dry-run mode, we just simulate a successful cancellation
+        if self.dry_run:
+            print(f"[DRY RUN] Cancelled order {order_id}")
+            return {
+                'id': order_id,
+                'status': 'canceled',
+                'info': {
+                    'simulation': True
+                }
+            }
+            
         try:
             if not self.exchange:
                 self.initialize_exchange()
