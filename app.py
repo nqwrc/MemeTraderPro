@@ -268,7 +268,8 @@ with tabs[0]:
                 kucoin = kapi.KuCoinAPI(
                     st.session_state.get('api_key', ''),
                     st.session_state.get('api_secret', ''),
-                    st.session_state.get('api_passphrase', '')
+                    st.session_state.get('api_passphrase', ''),
+                    dry_run=st.session_state.get('dry_run', True)
                 )
                 current_price = kucoin.get_current_price(symbol)
                 if current_price:
@@ -325,7 +326,8 @@ with tabs[0]:
                 kucoin = kapi.KuCoinAPI(
                     st.session_state.get('api_key', ''),
                     st.session_state.get('api_secret', ''),
-                    st.session_state.get('api_passphrase', '')
+                    st.session_state.get('api_passphrase', ''),
+                    dry_run=st.session_state.get('dry_run', True)
                 )
                 ohlcv_data = kucoin.fetch_ohlcv(symbol, '1h', limit=100)
                 if ohlcv_data and len(ohlcv_data) > 0:
@@ -422,7 +424,10 @@ with tabs[1]:
         # Test API connection
         if st.button("Test API Connection"):
             try:
-                kucoin = kapi.KuCoinAPI(api_key, api_secret, api_passphrase)
+                # Get current dry run setting
+                dry_run = st.session_state.get('dry_run', True)
+                
+                kucoin = kapi.KuCoinAPI(api_key, api_secret, api_passphrase, dry_run=dry_run)
                 if kucoin.test_connection():
                     st.success("Connection successful!")
                     # Get and display available balance
@@ -765,7 +770,8 @@ with tabs[4]:
                         kucoin = kapi.KuCoinAPI(
                             st.session_state.get('api_key', ''),
                             st.session_state.get('api_secret', ''),
-                            st.session_state.get('api_passphrase', '')
+                            st.session_state.get('api_passphrase', ''),
+                            dry_run=st.session_state.get('dry_run', True)
                         )
                         data_processor = DataProcessor()
                         model_trainer = ModelTrainer()

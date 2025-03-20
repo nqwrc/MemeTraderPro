@@ -7,6 +7,8 @@ from datetime import datetime
 class KuCoinAPI:
     """
     Class to handle interactions with the KuCoin exchange API using ccxt library
+    
+    Supports dry-run mode for simulated trading without using real funds
     """
     def __init__(self, api_key=None, api_secret=None, api_passphrase=None, dry_run=False):
         """
@@ -377,7 +379,8 @@ if __name__ == "__main__":
     api_secret = os.getenv("KUCOIN_API_SECRET", "")
     api_passphrase = os.getenv("KUCOIN_API_PASSPHRASE", "")
     
-    kucoin = KuCoinAPI(api_key, api_secret, api_passphrase)
+    # Example of using with dry_run mode
+    kucoin = KuCoinAPI(api_key, api_secret, api_passphrase, dry_run=True)
     
     if kucoin.test_connection():
         print("Connection successful!")
