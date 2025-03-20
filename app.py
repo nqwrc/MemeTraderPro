@@ -146,9 +146,19 @@ def run_trading_bot(symbols, api_key, api_secret, api_passphrase, timeframe, ini
                                 symbol, prediction, confidence, current_price, position, balance
                             )
                         else:
-                            # For dry-run testing, simulate some bullish predictions
-                            if np.random.random() < 0.3:  # 30% chance to force a trade for testing
-                                log_message(f"[DRY RUN] Simulating bullish signal for {symbol} for testing")
+                            # For dry-run testing, always force a trade on the first run
+                            # and occasionally on subsequent runs
+                            should_force_trade = False
+                            
+                            # Check if this is the first trade (no trade history)
+                            if st.session_state.trade_history.empty:
+                                should_force_trade = True
+                                log_message(f"[DRY RUN] First run - forcing a trade for {symbol}")
+                            elif np.random.random() < 0.4:  # 40% chance to force a trade for testing
+                                should_force_trade = True
+                                
+                            if should_force_trade:
+                                log_message(f"[DRY RUN] Forcing bullish signal for {symbol} for testing")
                                 action = 'buy'
                                 forced_amount = (kucoin.get_balance() * 0.2) / current_price  # Use 20% of balance
                                 amount = min(forced_amount, 1000 / current_price)  # Cap at equivalent of $1000
@@ -220,7 +230,12 @@ def run_trading_bot(symbols, api_key, api_secret, api_passphrase, timeframe, ini
                             log_message(f"Failed to execute {action} for {symbol}", "ERROR")
                 
                 # Sleep to avoid hitting API rate limits
-                time.sleep(60)  # Check every minute
+                # For dry run, we use a shorter sleep time to see results faster
+                if dry_run:
+                    log_message("[DRY RUN] Shorter sleep time for testing")
+                    time.sleep(10)  # Check every 10 seconds in dry run mode
+                else:
+                    time.sleep(60)  # Check every minute in real trading
                 
             except Exception as e:
                 log_message(f"Error in trading loop: {str(e)}", "ERROR")
