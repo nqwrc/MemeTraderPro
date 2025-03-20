@@ -41,6 +41,8 @@ if 'current_positions' not in st.session_state:
 # Function to log messages
 def log_message(message, level="INFO"):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if 'log_messages' not in st.session_state:
+        st.session_state.log_messages = []
     st.session_state.log_messages.append(f"[{level}] {timestamp} - {message}")
     # Keep only last 100 messages
     st.session_state.log_messages = st.session_state.log_messages[-100:]
