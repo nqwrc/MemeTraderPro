@@ -24,13 +24,13 @@ st.set_page_config(
     layout="wide"
 )
 
-# Initialize session state variables
+# Initialize session state variables - use st.session_state["key"] = value format for more reliable initialization
 if 'bot_running' not in st.session_state:
-    st.session_state.bot_running = False
+    st.session_state["bot_running"] = False
 if 'trade_history' not in st.session_state:
-    st.session_state.trade_history = pd.DataFrame(columns=['timestamp', 'symbol', 'type', 'price', 'amount', 'cost', 'profit_loss'])
+    st.session_state["trade_history"] = pd.DataFrame(columns=['timestamp', 'symbol', 'type', 'price', 'amount', 'cost', 'profit_loss'])
 if 'bot_thread' not in st.session_state:
-    st.session_state.bot_thread = None
+    st.session_state["bot_thread"] = None
 if 'performance_data' not in st.session_state:
     st.session_state.performance_data = {'total_trades': 0, 'profitable_trades': 0, 'total_profit_loss': 0.0, 'win_rate': 0.0}
 if 'log_messages' not in st.session_state:
@@ -63,6 +63,9 @@ def log_message(message, level="INFO"):
 # Trading bot function that runs in a separate thread
 def run_trading_bot(symbols, api_key, api_secret, api_passphrase, timeframe, initial_balance, 
                    risk_per_trade, stop_loss_pct, take_profit_pct, dry_run=True):
+    # Store a local copy of bot_running flag to avoid session state issues in threads
+    bot_running = True
+    
     try:
         log_message("Initializing trading bot...")
         
@@ -78,13 +81,23 @@ def run_trading_bot(symbols, api_key, api_secret, api_passphrase, timeframe, ini
         # Check if API connection works
         if not kucoin.test_connection():
             log_message("Failed to connect to KuCoin API. Please check your credentials.", "ERROR")
-            st.session_state.bot_running = False
+            bot_running = False
             return
         
         log_message(f"Successfully connected to KuCoin API")
         
-        # Trading loop
-        while st.session_state.bot_running:
+        # Trading loop - use local variable instead of session state
+        while bot_running and threading.current_thread().is_alive():
+            # Check if bot should still be running
+            try:
+                # This is thread-safe and will only execute when possible
+                if threading.current_thread() == threading.main_thread():
+                    bot_running = st.session_state.bot_running
+                elif not st.session_state.get("bot_running", True):
+                    bot_running = False
+            except:
+                # If any error accessing session state, continue with current value
+                pass
             try:
                 for symbol in symbols:
                     # Log attempt to fetch data
@@ -262,6 +275,10 @@ def run_trading_bot(symbols, api_key, api_secret, api_passphrase, timeframe, ini
 
 # Start/Stop the trading bot
 def toggle_bot():
+    # Make sure bot_running is initialized in session state
+    if 'bot_running' not in st.session_state:
+        st.session_state.bot_running = False
+        
     if st.session_state.bot_running:
         st.session_state.bot_running = False
         log_message("Stopping trading bot...")
