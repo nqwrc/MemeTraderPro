@@ -8,7 +8,7 @@ class KuCoinAPI:
     """
     Class to handle interactions with the KuCoin exchange API using ccxt library
     """
-    def __init__(self, api_key=None, api_secret=None, api_passphrase=None):
+    def __init__(self, api_key=None, api_secret=None, api_passphrase=None, dry_run=False):
         """
         Initialize the KuCoin API connection
 
@@ -16,11 +16,17 @@ class KuCoinAPI:
         api_key (str): KuCoin API key
         api_secret (str): KuCoin API secret
         api_passphrase (str): KuCoin API passphrase
+        dry_run (bool): Whether to run in dry-run mode (no real trades)
         """
         # Use provided credentials or try to get from environment variables
         self.api_key = api_key or os.getenv("KUCOIN_API_KEY", "")
         self.api_secret = api_secret or os.getenv("KUCOIN_API_SECRET", "")
         self.api_passphrase = api_passphrase or os.getenv("KUCOIN_API_PASSPHRASE", "")
+        
+        # Dry run mode settings
+        self.dry_run = dry_run
+        self.dry_run_balance = 1000.0  # Default initial balance for dry run
+        self.dry_run_positions = {}    # Track simulated positions {symbol: {amount, entry_price, timestamp}}
         
         # Initialize exchange connection
         self.exchange = None
@@ -54,6 +60,10 @@ class KuCoinAPI:
         Returns:
         bool: True if connection is successful, False otherwise
         """
+        # In dry-run mode, always return success
+        if self.dry_run:
+            return True
+            
         try:
             if not self.exchange:
                 self.initialize_exchange()
@@ -126,6 +136,16 @@ class KuCoinAPI:
         Returns:
         float: Available balance or None if error
         """
+        # In dry-run mode, return simulated balance
+        if self.dry_run:
+            # Calculate balance - subtract any allocated to positions
+            allocated_funds = 0.0
+            for symbol, position in self.dry_run_positions.items():
+                if currency in symbol:  # Check if this position involves this currency
+                    allocated_funds += position.get('cost', 0.0)
+            
+            return self.dry_run_balance - allocated_funds
+            
         try:
             if not self.exchange:
                 self.initialize_exchange()
