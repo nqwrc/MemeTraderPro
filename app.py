@@ -37,6 +37,29 @@ if 'model_metrics' not in st.session_state:
     st.session_state.model_metrics = {}
 if 'current_positions' not in st.session_state:
     st.session_state.current_positions = {}
+# Initialize dry run mode in session state
+if 'dry_run' not in st.session_state:
+    st.session_state.dry_run = True  # Default to dry run mode enabled
+# Initialize API credentials in session state
+if 'api_key' not in st.session_state:
+    st.session_state.api_key = os.getenv("KUCOIN_API_KEY", "")
+if 'api_secret' not in st.session_state:
+    st.session_state.api_secret = os.getenv("KUCOIN_API_SECRET", "")
+if 'api_passphrase' not in st.session_state:
+    st.session_state.api_passphrase = os.getenv("KUCOIN_API_PASSPHRASE", "")
+# Initialize trading settings in session state
+if 'selected_symbols' not in st.session_state:
+    st.session_state.selected_symbols = ["DOGE/USDT", "SHIB/USDT", "PEPE/USDT", "FLOKI/USDT"]
+if 'timeframe' not in st.session_state:
+    st.session_state.timeframe = "1h"
+if 'initial_balance' not in st.session_state:
+    st.session_state.initial_balance = 1000.0
+if 'risk_per_trade' not in st.session_state:
+    st.session_state.risk_per_trade = 0.02
+if 'stop_loss_pct' not in st.session_state:
+    st.session_state.stop_loss_pct = 0.05
+if 'take_profit_pct' not in st.session_state:
+    st.session_state.take_profit_pct = 0.15
 
 # Function to log messages
 def log_message(message, level="INFO"):
