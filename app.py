@@ -247,6 +247,119 @@ def run_trading_bot(symbols, api_key, api_secret, api_passphrase, timeframe, ini
         log_message(traceback.format_exc(), "ERROR")
         st.session_state.bot_running = False
 
+# Function to create a guaranteed test trade in dry-run mode
+def create_test_trade():
+    if st.session_state.dry_run:
+        try:
+            log_message("[DRY RUN TEST] Creating forced test trade...")
+            
+            # Use DOGE/USDT for demonstration
+            test_symbol = "DOGE/USDT"
+            
+            # Initialize API with dry run
+            kucoin = kapi.KuCoinAPI(
+                st.session_state.get('api_key', ''),
+                st.session_state.get('api_secret', ''),
+                st.session_state.get('api_passphrase', ''),
+                dry_run=True
+            )
+            
+            # Get current price
+            current_price = kucoin.get_current_price(test_symbol)
+            if not current_price:
+                log_message("[DRY RUN TEST] Could not get current price for test trade", "ERROR")
+                return
+                
+            # Calculate a reasonable amount (20% of balance)
+            balance = kucoin.get_balance()
+            amount = (balance * 0.2) / current_price
+            
+            # Execute BUY trade
+            log_message(f"[DRY RUN TEST] Executing forced BUY trade for {test_symbol} at {current_price}")
+            buy_result = kucoin.execute_trade(test_symbol, 'buy', amount, current_price)
+            
+            if buy_result:
+                # Record the buy trade
+                trade_record = {
+                    'timestamp': datetime.now(),
+                    'symbol': test_symbol,
+                    'type': 'buy',
+                    'price': current_price,
+                    'amount': amount,
+                    'cost': amount * current_price,
+                    'profit_loss': 0
+                }
+                
+                # Add to trade history
+                new_trade_df = pd.DataFrame([trade_record])
+                st.session_state.trade_history = pd.concat([st.session_state.trade_history, new_trade_df], ignore_index=True)
+                
+                # Update positions
+                st.session_state.current_positions[test_symbol] = {
+                    'entry_price': current_price,
+                    'amount': amount,
+                    'timestamp': datetime.now()
+                }
+                
+                log_message(f"[DRY RUN TEST] Successfully executed BUY trade for {amount} {test_symbol} at {current_price}")
+                
+                # After a short delay, simulate a price increase and sell
+                time.sleep(2)
+                
+                # Simulate a 10% price increase
+                new_price = current_price * 1.10
+                log_message(f"[DRY RUN TEST] Simulating price increase for {test_symbol}: {current_price} -> {new_price}")
+                
+                # Execute SELL trade with profit
+                log_message(f"[DRY RUN TEST] Executing forced SELL trade for {test_symbol} at {new_price}")
+                sell_result = kucoin.execute_trade(test_symbol, 'sell', amount, new_price)
+                
+                if sell_result:
+                    # Calculate profit
+                    profit = (new_price - current_price) * amount
+                    
+                    # Record the sell trade
+                    trade_record = {
+                        'timestamp': datetime.now(),
+                        'symbol': test_symbol,
+                        'type': 'sell',
+                        'price': new_price,
+                        'amount': amount,
+                        'cost': amount * new_price,
+                        'profit_loss': profit
+                    }
+                    
+                    # Add to trade history
+                    new_trade_df = pd.DataFrame([trade_record])
+                    st.session_state.trade_history = pd.concat([st.session_state.trade_history, new_trade_df], ignore_index=True)
+                    
+                    # Update performance metrics
+                    st.session_state.performance_data['total_trades'] += 1
+                    st.session_state.performance_data['total_profit_loss'] += profit
+                    st.session_state.performance_data['profitable_trades'] += 1
+                    
+                    # Calculate win rate
+                    if st.session_state.performance_data['total_trades'] > 0:
+                        st.session_state.performance_data['win_rate'] = (
+                            st.session_state.performance_data['profitable_trades'] / 
+                            st.session_state.performance_data['total_trades'] * 100
+                        )
+                    
+                    # Remove position
+                    st.session_state.current_positions.pop(test_symbol, None)
+                    
+                    log_message(f"[DRY RUN TEST] Successfully executed SELL trade for {amount} {test_symbol} at {new_price} (Profit: ${profit:.2f})")
+                    
+                    return True
+            
+            log_message("[DRY RUN TEST] Failed to execute test trades", "ERROR")
+            return False
+            
+        except Exception as e:
+            log_message(f"[DRY RUN TEST] Error creating test trades: {str(e)}", "ERROR")
+            return False
+    return False
+
 # Start/Stop the trading bot
 def toggle_bot():
     if st.session_state.bot_running:
@@ -272,6 +385,10 @@ def toggle_bot():
         # Get dry run setting
         dry_run = st.session_state.dry_run
         
+        # If in dry run mode, create a guaranteed test trade first
+        if dry_run:
+            create_test_trade()
+            
         # Start the bot in a new thread
         st.session_state.bot_thread = Thread(
             target=run_trading_bot,
@@ -308,6 +425,18 @@ with tabs[0]:
             st.metric("Total P/L", pl_value)
         else:
             st.metric("Total P/L", "$0.00")
+    
+    # Add a button for executing test trades in dry-run mode
+    if st.session_state.dry_run:
+        st.write("---")
+        st.subheader("Dry Run Testing")
+        if st.button("Execute Test Trade Now", use_container_width=True):
+            log_message("Manually triggering a test trade...")
+            if create_test_trade():
+                st.success("Test trade executed successfully!")
+                st.rerun()
+            else:
+                st.error("Failed to execute test trade.")
     
     # Current positions
     st.subheader("Current Positions")
