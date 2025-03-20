@@ -6,8 +6,10 @@ import os
 from datetime import datetime, timedelta
 import joblib
 import numpy as np
+import threading
 from threading import Thread
 import traceback
+import sys
 
 import kucoin_api as kapi
 from data_processor import DataProcessor
@@ -41,9 +43,20 @@ if 'current_positions' not in st.session_state:
 # Function to log messages
 def log_message(message, level="INFO"):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Create formatted message
+    formatted_message = f"[{level}] {timestamp} - {message}"
+    
+    # For background threads, print to console and don't touch session state
+    if threading.current_thread() != threading.main_thread():
+        print(formatted_message)
+        return
+        
+    # For main thread, update session state
     if 'log_messages' not in st.session_state:
         st.session_state.log_messages = []
-    st.session_state.log_messages.append(f"[{level}] {timestamp} - {message}")
+    
+    st.session_state.log_messages.append(formatted_message)
     # Keep only last 100 messages
     st.session_state.log_messages = st.session_state.log_messages[-100:]
 
@@ -75,7 +88,7 @@ def run_trading_bot(symbols, api_key, api_secret, api_passphrase, timeframe, ini
             try:
                 for symbol in symbols:
                     # Log attempt to fetch data
-                    log_message(f"Fetching data for {symbol}...")
+                    log_message(f"Fetching data for {symbol} (timeframe: {timeframe})...")
                     
                     # Fetch latest price data
                     ohlcv_data = kucoin.fetch_ohlcv(symbol, timeframe)

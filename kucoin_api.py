@@ -98,12 +98,18 @@ class KuCoinAPI:
             
             # Fetch the OHLCV data
             if self.dry_run:
-                print(f"[DRY RUN] Fetching OHLCV data for {symbol}")
+                print(f"[DRY RUN] Fetching OHLCV data for {symbol} ({timeframe})")
                 
             ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
             
             if self.dry_run:
-                print(f"[DRY RUN] Received {len(ohlcv) if ohlcv else 0} candles for {symbol}")
+                candle_count = len(ohlcv) if ohlcv else 0
+                print(f"[DRY RUN] Received {candle_count} candles for {symbol}")
+                if candle_count > 0:
+                    # Print the latest candle timestamp and price for debugging
+                    latest = ohlcv[-1]
+                    latest_time = datetime.fromtimestamp(latest[0]/1000).strftime('%Y-%m-%d %H:%M:%S')
+                    print(f"[DRY RUN] Latest price for {symbol}: {latest[4]} at {latest_time}")
             
             # Convert to list format [timestamp, open, high, low, close, volume]
             return ohlcv
