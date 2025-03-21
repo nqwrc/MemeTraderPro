@@ -329,8 +329,9 @@ def create_test_trade():
                 # After a short delay, simulate a price increase and sell
                 time.sleep(2)
                 
-                # Simulate a 10% price increase
-                new_price = current_price * 1.10
+                # Simulate a random price movement between -5% and +15%
+                price_change = np.random.uniform(-0.05, 0.15)
+                new_price = current_price * (1 + price_change)
                 log_message(f"[DRY RUN TEST] Simulating price increase for {test_symbol}: {current_price} -> {new_price}")
                 
                 # Execute SELL trade with profit
